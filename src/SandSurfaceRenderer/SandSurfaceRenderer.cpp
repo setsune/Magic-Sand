@@ -1,10 +1,27 @@
-//
-//  SandSurfaceRenderer.cpp
-//  GreatSand
-//
-//  Created by Thomas Wolf on 02/07/16.
-//
-//
+/***********************************************************************
+SandSurfaceRenderer - SandSurfaceRenderer compute and display the colors
+on the sand based on the elevation and the colormap.
+Copyright (c) 2016 Thomas Wolf
+
+--- Adapted from Oliver Kreylos SurfaceRenderer:
+Copyright (c) 2012-2015 Oliver Kreylos
+
+This file is part of the Magic Sand.
+
+The Magic Sand is free software; you can redistribute it
+and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 2 of the
+License, or (at your option) any later version.
+
+The Magic Sand is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with the Magic Sand; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+***********************************************************************/
 
 #include "SandSurfaceRenderer.h"
 
@@ -84,6 +101,8 @@ void SandSurfaceRenderer::setup(bool sdisplayGui){
 	contourLineFboOffset = elevationMax;
     contourLineFactor = contourLineFboScale/contourLineDistance;
     
+	kinectROI = kinectProjector->getKinectROI();
+
     //setup the mesh
     setupMesh();
     
@@ -159,12 +178,15 @@ void SandSurfaceRenderer::updateRangesAndBasePlane(){
 
 void SandSurfaceRenderer::setupMesh(){
     // Initialise mesh
-    ofRectangle kinectROI = kinectProjector->getKinectROI();
-    ofVec2f kinectRes = kinectProjector->getKinectRes();
+    kinectROI = kinectProjector->getKinectROI();
+  //  ofVec2f kinectRes = kinectProjector->getKinectRes();
+	ofLogVerbose("SandSurfaceRenderer") << "setupMesh. KinectROI: " << kinectROI;
+
     meshwidth = kinectROI.width;
     meshheight = kinectROI.height;
     mesh.clear();
-    for(unsigned int y=0;y<meshheight;y++)
+
+	for (unsigned int y = 0; y < meshheight; y++)
         for(unsigned int x=0;x<meshwidth;x++)
         {
             ofPoint pt = ofPoint(x+kinectROI.x,y+kinectROI.y,0.0f)-ofPoint(0.5,0.5,0); // We move of a half pixel to center the color pixel (more beautiful)
@@ -186,8 +208,9 @@ void SandSurfaceRenderer::setupMesh(){
 
 void SandSurfaceRenderer::update(){
     // Update Renderer state if needed
-    if (kinectProjector->isROIUpdated())
-        setupMesh();
+    //if (kinectProjector->isROIUpdated() || kinectProjector->getKinectROI() != kinectROI)
+	if (kinectProjector->getKinectROI() != kinectROI)
+		setupMesh();
     if (kinectProjector->isBasePlaneUpdated())
         updateRangesAndBasePlane();
     if (kinectProjector->isCalibrationUpdated())

@@ -1,8 +1,23 @@
 /***********************************************************************
- KinectGrabber - control the kinect and perform frame filtering.
- Frame filtering method adapted from Oliver Kreylos SARndbox FrameFilter.cpp
- https://github.com/KeckCAVES/SARndbox
- ***********************************************************************/
+KinectGrabber - KinectGrabber takes care of the communication with
+the kinect and the filtering of depth frame.
+Copyright (c) 2016 Thomas Wolf
+
+--- Adapted from FrameFilter of the Augmented Reality Sandbox
+Copyright (c) 2012-2015 Oliver Kreylos
+
+This file is part of the Magic Sand.
+
+The Magic Sand is free software; you can redistribute it
+and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 2 of the
+License, or (at your option) any later version.
+
+The Magic Sand is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+***********************************************************************/
 
 #pragma once
 #include "ofMain.h"
@@ -71,6 +86,14 @@ public:
         spatialFilter = newspatialFilter;
     }
     
+	void setInPainting(bool inp)
+	{
+		doInPaint = inp;
+	}
+
+	// Should the entire frame be filtered and thereby ignoring the KinectROI
+	void setFullFrameFiltering(bool ff, ofRectangle ROI);
+
 	ofThreadChannel<ofFloatPixels> filtered;
 	ofThreadChannel<ofPixels> colored;
 	ofThreadChannel<ofVec2f*> gradient;
@@ -82,6 +105,16 @@ private:
     void applySpaceFilter();
     void updateGradientField();
     
+	// A simple inpainting algorithm to remove outliers in the depth
+	// Since the shader has no way of filtering outliers (0 and 4000 values mainly) it creates visual artifacts if they are not 
+	// removed prior to the shader pass
+	void applySimpleOutlierInpainting();
+	float findInpaintValue(float *data, int x, int y);
+	double ROIAverageValue = 0;
+	int setToLocalAvg = 0;
+	int setToGlobalAvg = 0;
+
+
 	bool newFrame;
     bool bufferInitiated;
     bool firstImageReady;
@@ -95,8 +128,8 @@ private:
 	bool kinectOpened;
     ofxKinect               kinect;
     unsigned int width, height; // Width and height of kinect frames
-    int minX, maxX, ROIwidth; // ROI definition
-    int minY, maxY, ROIheight;
+	int minX, maxX; // , ROIwidth; // ROI definition
+	int minY, maxY; //, ROIheight;
     
     // General buffers
     ofxCvColorImage         kinectColorImage;
@@ -120,17 +153,20 @@ private:
 	unsigned int minNumSamples; // Minimum number of valid samples needed to consider a pixel stable
 	float maxVariance; // Maximum variance to consider a pixel stable
     float initialValue;
-    float outsideROIValue;
+ //   float outsideROIValue;
 	float hysteresis; // Amount by which a new filtered value has to differ from the current value to update the display
     bool followBigChange;
     float bigChange; // Amount of change over which the averaging slot is reset to new value
-	float instableValue; // Value to assign to instable pixels if retainValids is false
+//	float instableValue; // Value to assign to instable pixels if retainValids is false
 	bool spatialFilter; // Flag whether to apply a spatial filter to time-averaged depth values
     float maxOffset;
     
     int minInitFrame; // Minimal number of frame to consider the kinect initialized
     int currentInitFrame;
-    
+
+	bool doInPaint;
+
+	bool doFullFrameFiltering;
     // Debug
 //    int blockX, blockY;
 };
